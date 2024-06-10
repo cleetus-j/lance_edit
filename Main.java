@@ -1,12 +1,7 @@
 import java.io.*;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     public static void main(String[] args) throws IOException {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        //System.out.printf("Hello and welcome!");
         byte[] chars,charsbkp =new byte[263]; //This is the amount of the whole array in the ROM. This is for all eight characters.
         byte[] rom=readRom("//media//work//devver//disas//HOTL//anotherexam//editor//Lance.sms");
         String[] charnames={"Goldmoon","Sturm","Caramon","Raistlin","Tanis","Tasslehoff","Riverwind","Flint"};
@@ -87,13 +82,13 @@ public class Main {
                 "Glitch\\Falling Stone" //I guess the item\trap names are just falling stones from now.
 
         };
-        for (int i = 0; i <= 16; i++) {
+ /*       for (int i = 0; i <= 16; i++) {
             //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
             // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
             //System.out.println("i = " + i);
             System.out.print(String.format("0x%02X",rom[i])+"    \n");
 
-        }
+        } */
         chars=getcharstat(rom);
         charsbkp=getcharstat(rom);
         //printchrinv(6,chars,itemNames);
@@ -101,7 +96,8 @@ public class Main {
         byte[] items=extractItems(rom);
         //printItems(items,itemNames);
         //saverom2(rom);
-        printNme(rom);
+        //printNme(rom);
+        printlvlPointerDetails(1,rom);
     }
     public static byte[] getcharstat (byte[] rom){
     byte[] charstat=new byte[263];
@@ -242,6 +238,7 @@ fos.close();
         }
     }   //Prints the ROM's items and it seems to be trap content, where they are, and what is in the boxes. Basically we can put traps and items in the same array, and it will get processed. The game's code is pretty flexible this way.
     public static void printNme(byte[] rom){
+
         String[] nmeTypes={
                 "Nothing\\Empty",
                 "Goldmoon",
@@ -291,4 +288,267 @@ fos.close();
             );
         }
     }
+    public static void printlvlPointerDetails(int roomNr,byte[] rom) {
+    	int lvlPointer=0x1343;	//This is the original ROM address for the level pointers.    	//The code will mimic the original written in assembly to extract the data the program will show later.    	//A is coming from the roomNR, which is the input parameter.    	short hl=lvlPointer-2;	//ld hl,_data_1343_lvl_pointers-2    	short de=(short)roomNr+roomNr;	//add a,a    	hl+=de;					//add hl,de    	byte aTemp=rom[hl];	//ld a,(hl)	We make a temp A for the result, but it will be even better later, i'm sure.    	hl++;				//inc hl
+    	//System.out.println(String.format("0x%02X", hl));
+        //System.out.println(Integer.toBinaryString(hl));
+    	int Accumulator; //Z80 has an 8-bit accumulator, what is used for math.
+        int H,L,D,E,B,C,I,X,Y =0;   
+        int HL,DE,BC,IX,IY=0;
+        BC=0;
+        int sHL=0,sDE=0,sBC=0,sAccumulator=0;
+        int[] stack=new int[255];
+        int stackpointer=0;
+        int _RAM_DE3E_MAX_LVL_LENGHT; //Level length in the ROM.
+        int _DATA_12E1_=0x12E1;
+        int _RAM_DE31_METATILE_BANK;
+        int _RAM_DE29_METATILE_TILE_LOAD;
+        int _RAM_DE32_;
+        int _RAM_DE2F_;
+        int _RAM_DE2E_BANKSWITCH_LEVEL;
+        int _RAM_DE2A_;
+        int _RAM_DE5E_FLOORFALLXCOORD;
+        int _RAM_DE60_;
+        int _RAM_DE53_COMPASS;
+        int _RAM_C800_1ST_METATILE_ROW=0xC800;
+        int _RAM_FFFF_=0;
+        Accumulator=(byte)roomNr;   //ld a,(_RAM_DE52_ROOM_NR)
+    	HL=lvlPointer-2;            //ld hl,_DATA_1343_LVL_POINTERS - 2
+        Accumulator+=Accumulator;   //add a,a
+        E=Accumulator;              //ld e,a
+        D=0;                        //ld d,$00
+        DE = ((D & 0xFF) << 8) | (E & 0xFF);
+        HL+=DE;                     //add hl, de
+        Accumulator=rom[HL];        //ld a, (HL)
+        HL++;                       //inc HL
+        H=rom[HL];                  //ld h, (HL)
+        L=Accumulator;
+        HL = ((H & 0xFF) << 8) | (L & 0xFF);    //Combine to HL.
+        Accumulator=rom[HL];                    //ld a, (HL)
+        stack[stackpointer]=HL;                //Push HL
+        stackpointer++;                         //Adjust stackpointer. 
+        L=Accumulator;                         //ld l, a
+        H=0;                                    //ld h, $00
+        HL = ((H & 0xFF) << 8) | (L & 0xFF);    //Combine to HL.
+        HL+=HL;         //add hl, hl
+        HL+=HL;         //add hl, hl
+        HL+=HL;         //add hl, hl
+        HL+=HL;         //add hl, hl
+        DE=0x0100;      //ld de,$0100
+        Accumulator&=Accumulator;   //and a This is to lose carry, but I don't know if this is needed in java at least.
+        HL-=DE;         //SBC HL,DE
+        _RAM_DE3E_MAX_LVL_LENGHT=HL;   //LD (_RAM_DE3E_MAX_LVL_LEN), hl
+        stack[stackpointer]=Accumulator;    //push AF   We don't need F here.
+        stackpointer--; //Adjust SP.            //Some code comes now that adjusts the camera, but that's not needed here.
+        HL=stack[stackpointer]; //Get back HL, A is still $50, so we are good on that.
+        Accumulator=Accumulator>>2;     //SRL a, SRL a      We combine the two shifts here.
+        B=Accumulator;      //ld b,a
+        HL++;   //inc HL
+        Accumulator=rom[HL];    //ld a, (hl)
+        HL++;       //inc HL
+        stack[stackpointer]=HL;     //push HL
+        stackpointer++;
+        HL=_DATA_12E1_;      //LD hl,_DATA_12E1_
+        Accumulator+=Accumulator;   //ld a,a 
+        E=Accumulator;      //ld e, a
+        D=0;                //ld d,$00
+        DE = ((D & 0xFF) << 8) | (E & 0xFF);
+        HL+=DE;             //add HL, DE
+        Accumulator=rom[HL];    //ld a, (HL)
+        HL++;   //inc HL
+        H=rom[HL];  //ld h, (hl)
+        HL|=(H & 0xFF) << 8;    
+        L=Accumulator;  //ld l, a
+        HL = ((H & 0xFF) << 8) | (L & 0xFF);    //Combine to HL.
+        Accumulator=rom[HL];    //a ,(HL)
+        _RAM_DE31_METATILE_BANK=Accumulator;
+        HL++;
+        Accumulator=rom[HL];
+        _RAM_DE2E_BANKSWITCH_LEVEL=Accumulator;    //ld (_RAM_DE31_METATILE_BANK), a	;Metatile bank.
+        HL++;       //inc hl
+        Accumulator=rom[HL];
+        _RAM_DE29_METATILE_TILE_LOAD=Accumulator;   //ld (_RAM_DE29_METATILE_TILE_LOAD), a	;05	This is the tiles for the metatiles.
+        HL++;       //inc HL
+        E=rom[HL];  //ld e, (HL)
+        HL++;           //inc HL
+        D=rom[HL];      //ld d,(HL)
+        DE = ((D & 0xFF) << 8) | (E & 0xFF);        //Set DE completely.
+        _RAM_DE32_=rom[DE]; //ld (_RAM_DE32_),DE
+        HL++;   //inc hl
+        E=rom[HL];  //ld e,(HL)
+        HL++;   //inc HL
+        D=rom[HL];  //ld d,(HL)
+        DE = ((D & 0xFF) << 8) | (E & 0xFF);        //Set DE completely.
+        _RAM_DE2F_=DE;  //ld (_RAM_DE2F_), de
+        HL++;
+        E=rom[HL];  //ld e,(HL)
+        HL++;   //inc HL
+        D=rom[HL];  //ld d,(HL)
+        DE = ((D & 0xFF) << 8) | (E & 0xFF);        //Set DE completely.
+        _RAM_DE2A_=rom[DE]; //ld (_RAM_DE2A_), de	;$8000.	
+        stackpointer--;
+        HL=stack[stackpointer]; //pop hl
+        E=rom[HL];  //ld e, (HL)
+        HL++;   //inc HL
+        D=rom[HL];  //d, (hl)
+        DE = ((D & 0xFF) << 8) | (E & 0xFF);        //Set DE completely.
+        HL++;
+        stack[stackpointer]=DE; //push DE
+        //stackpointer++; //We use this immediately.
+        IX=DE;  //pop IX
+        Accumulator=0;      //We skip the if, and during normal operation this will be zero.
+        //Accumulator=roomNr; //ld a, (_RAM_DE52_ROOM_NR) //Not needed, as there was an if condition there, but that's not needed at the moment.
+        //Here comes an if statement, though I'm not sure if it brings anything new here so far.
+        E=rom[HL];  //ld e, (hl)
+        HL++;   //inc hl
+        D=rom[HL];  //ld d,(hl)
+        DE = ((D & 0xFF) << 8) | (E & 0xFF);        //Set DE completely.
+        HL++;   //inc HL
+        _RAM_DE5E_FLOORFALLXCOORD=DE; //ld (_RAM_DE5E_FLOORFALLXCOORD), de
+        E=rom[HL];  //ld e, (hl)
+        HL++;   //inc hl
+        D=rom[HL];  //ld d,(hl)
+        DE = ((D & 0xFF) << 8) | (E & 0xFF);        //Set DE completely.
+        HL++;   //inc HL
+        _RAM_DE60_=DE;  //ld (_RAM_DE60_), de		;$1944.
+        Accumulator=rom[HL]; //ld a, (hl)
+        _RAM_DE53_COMPASS=Accumulator;  //
+        int temp1,temp2=0;
+        temp1=HL;
+        temp2=sHL;
+        HL=temp2;
+        sHL=temp1;  //Exx HL.
+        temp1=DE;
+        temp2=sDE;
+        DE=temp2;
+        sDE=temp1;  //Exx DE.
+
+        temp1=BC;
+        temp2=sBC;
+        BC=temp2;
+        sBC=temp1;  //Exx BC.
+
+        temp1=Accumulator;
+        temp2=sAccumulator;
+        Accumulator=temp2;
+        sAccumulator=temp1;  //Exx Acc.
+
+        DE=_RAM_C800_1ST_METATILE_ROW;  //This is C800 ld DE, $C800
+        BC=4;   //ld BC, $0004
+
+        temp1=HL;
+        temp2=sHL;
+        HL=temp2;
+        sHL=temp1;  //Exx HL.
+        temp1=DE;
+        temp2=sDE;
+        DE=temp2;
+        sDE=temp1;  //Exx DE.
+
+        temp1=BC;
+        temp2=sBC;
+        BC=temp2;
+        sBC=temp1;  //Exx BC.
+
+        temp1=Accumulator;
+        temp2=sAccumulator;
+        Accumulator=temp2;
+        sAccumulator=temp1;  //Exx Acc.
+        //An EXX back
+        Accumulator=0;  //xor a
+        int _RAM_DE5A_=Accumulator; //ld (_RAM_DE5A_), a
+        int _RAM_DE59_LEFT_DEBUG_NR=Accumulator;    //ld (_RAM_DE59_LEFT_DEBUG_NR), a
+//_LABEL_D29_
+        stack[stackpointer]=BC; //push BC
+        stackpointer++;
+        temp1=HL;
+        temp2=sHL;
+        HL=temp2;
+        sHL=temp1;  //Exx HL.
+        temp1=DE;
+        temp2=sDE;
+        DE=temp2;
+        sDE=temp1;  //Exx DE.
+
+        temp1=BC;
+        temp2=sBC;
+        BC=temp2;
+        sBC=temp1;  //Exx BC.
+
+        temp1=Accumulator;
+        temp2=sAccumulator;
+        Accumulator=temp2;
+        sAccumulator=temp1;  //Exx Acc.
+        //This is a manual EXX. 
+        HL=0x0004;  //ld hl, $0004
+        HL+=DE; //add HL, DE
+        temp1=HL;
+        temp2=DE;
+        HL=temp2;
+        DE=temp1;   //ex hl,de
+
+        temp1=HL;
+        temp2=sHL;
+        HL=temp2;
+        sHL=temp1;  //Exx HL.
+        temp1=DE;
+        temp2=sDE;
+        DE=temp2;
+        sDE=temp1;  //Exx DE.
+
+        temp1=BC;
+        temp2=sBC;
+        BC=temp2;
+        sBC=temp1;  //Exx BC.
+
+        temp1=Accumulator;
+        temp2=sAccumulator;
+        Accumulator=temp2;
+        sAccumulator=temp1;  //Exx Acc.
+
+        Accumulator=_RAM_DE2E_BANKSWITCH_LEVEL; //ld a, (_RAM_DE2E_BANKSWITCH_LEVEL)
+        _RAM_FFFF_=Accumulator; //ld (_RAM_FFFF_), a    This is the bankswitch part of the code, but this also holds the last bank you've used, and some code refers to this, so this is definetly coming here.
+        DE=_RAM_DE2F_;  //ld de, (_RAM_DE2F_)
+        Accumulator=rom[IX+0];  //ld a, (IX+0) The +0 does nothing, but why not include it for completeness?
+        IX++;   //inc IX
+        L=0;    //ld l,$00
+        H=Accumulator;  //ld h,a
+        HL = ((H & 0xFF) << 8) | (L & 0xFF);    //Combine to HL.
+        H>>=2;
+        
+        //System.out.println(Integer.toBinaryString(DE));
+        System.out.println("Room Nr.: "+roomNr);
+        System.out.println("DE: "+String.format("0x%02X", DE));
+        System.out.println("HL: "+String.format("0x%02X", HL));
+        System.out.println("IX: "+String.format("0x%02X", IX));
+        System.out.println("Accumulator: "+String.format("0x%02X", Accumulator));
+        /*System.out.println("Max. Level Length: "+String.format("0x%02X", _RAM_DE3E_MAX_LVL_LENGHT));
+
+        System.out.println("_RAM_DE31_METATILE_BANK: "+String.format("0x%02X", _RAM_DE31_METATILE_BANK));
+        System.out.println("_RAM_DE29_METATILE_TILE_LOAD: "+String.format("0x%02X", _RAM_DE29_METATILE_TILE_LOAD));
+        System.out.println("_RAM_DE32_: "+String.format("0x%02X", _RAM_DE32_));
+        System.out.println("_RAM_DE2F_: "+String.format("0x%02X", _RAM_DE2F_));
+        
+        System.out.println("RAM_DE2E_BANKSWITCH_LEVEL: "+String.format("0x%02X", _RAM_DE2E_BANKSWITCH_LEVEL));
+        System.out.println("_RAM_DE2A_: "+String.format("0x%02X", _RAM_DE2A_));
+        System.out.println("_RAM_DE5E_FLOORFALLXCOORD: "+String.format("0x%02X", _RAM_DE5E_FLOORFALLXCOORD));
+        System.out.println("_RAM_DE60_: "+String.format("0x%02X", _RAM_DE60_));
+        System.out.println("_RAM_DE53_COMPASS: "+String.format("0x%02X", _RAM_DE53_COMPASS));
+        System.out.println("_RAM_DE60_: "+String.format("0x%02X", _RAM_DE60_));
+        */
+
+        //System.out.println(Integer.toBinaryString(lTemp<<2));
+        //int HL,DE,BC,IX,IY=0;
+        //int sHL,sDE,sBC,sAccumulator;
+    }
+    
+    
+    
+    
+
+
+
+
+
+
 }
