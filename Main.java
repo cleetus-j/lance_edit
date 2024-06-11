@@ -511,10 +511,24 @@ fos.close();
         DE=_RAM_DE2F_;  //ld de, (_RAM_DE2F_)
         Accumulator=rom[IX+0];  //ld a, (IX+0) The +0 does nothing, but why not include it for completeness?
         IX++;   //inc IX
-        L=0;    //ld l,$00
-        H=Accumulator;  //ld h,a
-        HL = ((H & 0xFF) << 8) | (L & 0xFF);    //Combine to HL.
-        H>>=2;
+        //L=0;    //ld l,$00
+        //H=Accumulator;  //ld h,a
+        //HL = ((H & 0xFF) << 8) | (L & 0xFF);    //Combine to HL.
+        //H>>=2;
+        //HL>>=2; 
+        //HL=emulateZ80Assembly(Accumulator);
+        H = H >>> 1; // srl h
+        L = (L >>> 1) | ((H & 0x1) << 7); // rr l
+
+        H = H >>> 1; // srl h
+        L = (L >>> 1) | ((H & 0x1) << 7); // rr l
+
+        /*
+         * Upon analyzing the game code more, it seems that the shifting is a simple 16-bit one. H is shifted right, so if there's something in 
+         * the last bit, it will be pushed into the carry flag.
+         * We load L with zeroes, then shift the carry flag's contents into it, and then this is done for the second time.
+         * 
+         */
         
         //System.out.println(Integer.toBinaryString(DE));
         System.out.println("Room Nr.: "+roomNr);
@@ -541,7 +555,30 @@ fos.close();
         //int HL,DE,BC,IX,IY=0;
         //int sHL,sDE,sBC,sAccumulator;
     }
+    public static int emulateZ80Assembly(int A) {
+        byte L = 0x00;  // Equivalent to ld l, $0
+        byte H = A;     // Equivalent to ld h, a
     
+        // Perform the sequence of operations
+        boolean carryFlag=false;
+    
+        // First SRL H
+        carryFlag = (H & 0x01) != 0;
+        H = (byte) ((H & 0xFF) >>> 1);
+    
+        // First RR L
+        L = (byte) ((L & 0xFF) >>> 1 | (carryFlag ? 0x80 : 0));
+    
+        // Second SRL H
+        carryFlag = (H & 0x01) != 0;
+        H = (byte) ((H & 0xFF) >>> 1);
+    
+        // Second RR L
+        L = (byte) ((L & 0xFF) >>> 1 | (carryFlag ? 0x80 : 0));
+    
+        // Combine H and L into HL
+        return ((H & 0xFF) << 8) | (L & 0xFF);
+    }
     
     
     
