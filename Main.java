@@ -288,7 +288,58 @@ fos.close();
             );
         }
     }
+    public static void prnLvlptrDet(int room, byte[] rom){
+/*
+ * Let's try again, and just print the level pointer details that are in the original ROM. The game uses a pointer table, that has 87 valid enties.
+ * Any more of them, and the game will load something, but players will go to Lala Land.
+ */
+        int lvlptr=0x1343;
+        int _RAM_DE3E_MAX_LVL_LEN;
+        int Acc;
+        int HL;
+        int DE;
+        int BC;
+        int[] stack=new int[255];//The original game does not have this much stack.
+        int stacksize=0;
+    
+        Acc=room;
+        HL=lvlptr-2;
+        Acc+=Acc;
+        DE = ((0x00 & 0xFF) << 8) | (Acc & 0xFF);
+        /*
+         * ld e,a
+         * ld d,$00
+         */
+        Acc=rom[HL];
+        HL++;
+        HL = ((rom[HL] & 0xFF) << 8) | (Acc & 0xFF);
+        /*
+         * ld h,(hl)
+         * ld l,a
+         * The fuckery starts here.
+         */
+        stack[stacksize]=HL;
+        stacksize++;    
+        HL = ((0x00 & 0xFF) << 8) | (Acc & 0xFF);
+        /*
+         * ld l,a
+         * ld h,$00
+         */
+        HL+=HL;
+        HL+=HL;
+        HL+=HL;
+        HL+=HL;
+        DE=0x0100;
+        Acc&=Acc;
+        HL-=DE;
+        _RAM_DE3E_MAX_LVL_LEN=HL;
+        stack[stacksize]=Acc;
+        stacksize++;
+        //The level length is now known.
+    }
     public static void printlvlPointerDetails(int roomNr,byte[] rom) {
+
+        //This is still work in progress, and now absolute trash.
     	int lvlPointer=0x1343;	//This is the original ROM address for the level pointers.    	//The code will mimic the original written in assembly to extract the data the program will show later.    	//A is coming from the roomNR, which is the input parameter.    	short hl=lvlPointer-2;	//ld hl,_data_1343_lvl_pointers-2    	short de=(short)roomNr+roomNr;	//add a,a    	hl+=de;					//add hl,de    	byte aTemp=rom[hl];	//ld a,(hl)	We make a temp A for the result, but it will be even better later, i'm sure.    	hl++;				//inc hl
     	//System.out.println(String.format("0x%02X", hl));
         //System.out.println(Integer.toBinaryString(hl));
@@ -522,13 +573,33 @@ fos.close();
 
         H = H >>> 1; // srl h
         L = (L >>> 1) | ((H & 0x1) << 7); // rr l
-
-        /*
-         * Upon analyzing the game code more, it seems that the shifting is a simple 16-bit one. H is shifted right, so if there's something in 
-         * the last bit, it will be pushed into the carry flag.
-         * We load L with zeroes, then shift the carry flag's contents into it, and then this is done for the second time.
-         * 
-         */
+        
+/*
+ * Upon analyzing the game code more, it seems that the shifting is a simple 16-bit one. H is shifted right, so if there's something in 
+ * the last bit, it will be pushed into the carry flag.
+ * We load L with zeroes, then shift the carry flag's contents into it, and then this is done for the second time.
+ * This stuff above this is still cool as it is.
+ */
+        
+        HL+=DE; //add HL, DE
+        temp1=DE;
+        temp2=HL;
+        HL=temp1;
+        DE=temp2;   //EX DE,HL
+        B=8;    //ld B,$08
+//_LABEL_D4F_:
+        C=4;    //ld c, $04
+        stack[stackpointer]=DE; //push DE
+        stackpointer++;
+//_LABEL_D52:
+        BC = ((B & 0xFF) << 8) | (C & 0xFF);    //Combining the two.
+        Accumulator=_RAM_DE2E_BANKSWITCH_LEVEL; //ld a, _RAM_DE2E_BANKSWITCH_LEVEL
+        _RAM_FFFF_=Accumulator; //ld (_RAM_FFFF_),a
+        Accumulator=DE; //ld a, (de)
+        Accumulator+=0xD0;  //add a, $D0
+        
+        
+        
         
         //System.out.println(Integer.toBinaryString(DE));
         System.out.println("Room Nr.: "+roomNr);
