@@ -95,14 +95,14 @@ public class Main {
             System.out.print(String.format("0x%02X",rom[i])+"    \n");
 
         } */
-        chars=getcharstat(rom);
-        charsbkp=getcharstat(rom);
-        //printchrinv(6,chars,itemNames);
-        //printchrstats(1,chars,itemNames);
-        byte[] items=extractItems(rom);
-        //printItems(items,itemNames);
-        //saverom2(rom);
-        //printNme(rom);
+        chars=getcharstat(rom);		//This works, and gets character stats from the ROM.
+        charsbkp=getcharstat(rom);	//This is the same, just puts this into a backup table in RAM.
+        //printchrinv(6,chars,itemNames);	//Prints the character inventory, but this could be remade into something else.
+        //printchrstats(1,chars,itemNames);	//Prints what stats a character has. Also could be rewritten.
+        byte[] items=extractItems(rom);		//As the name suggests, this extracts the items from the array in the ROM, that handles item placement and type as well.
+        //printItems(items,itemNames);		//Prints itemnames, and items.
+        //saverom2(rom);			//This maybe saves the ROM to another file.
+        //printNme(rom);			//Prints the enemy names, types and other stuff.
         //printlvlPointerDetails(1,rom);
 //        printDoorDetails(rom);
 	printdoorDetails(3,rom);
@@ -796,23 +796,30 @@ public static void printdoorDetails(int doorNumber,byte[] rom) {	//Give it the r
 	tempDoor.doorEnd=rom[doornrRomOffset+4];
 //------------------------------------------------------
 	System.out.println("----------------DOOR DETAILS----------");
+	System.out.println("Selected door number in the array: "+doorNumber);
 	System.out.println("Door Address in ROM: "+String.format("0x%04X",(doornrRomOffset)));	//We need this in hexadecimal.
-	System.out.println("Numbers not zero means the given bit is set.");
+	System.out.println("Compass details. Numbers not zero means the given bit is set.");
+	System.out.println("--------------------------------------");
 	System.out.println("Going up: "+tempDoor.door.up);//Finally, object in an object!.
 	System.out.println("Going down: "+tempDoor.door.down);
 	System.out.println("Falldown: "+tempDoor.door.falldown);
-	System.out.println("Unused1"+tempDoor.door.unused1);
+	System.out.println("Unused1: "+tempDoor.door.unused1);
 	System.out.println("Waterfall: "+tempDoor.door.waterfall);
-	System.out.println("Unused2"+tempDoor.door.unused2);
-	System.out.println("Unused3"+tempDoor.door.unused3);
-	System.out.println("Show Compass"+tempDoor.door.compassShow);
+	System.out.println("Unused2: "+tempDoor.door.unused2);
+	System.out.println("Unused3: "+tempDoor.door.unused3);
+	System.out.println("Show Compass: "+tempDoor.door.compassShow);
+	System.out.println("--------------------------------------")
+	System.out.println("Destination room Nr if door is taken: "+tempDoor.roomnumber);
+	System.out.println("Column where the player spawns if door is taken: "+tempDoor.columnplyrStarts);
+	System.out.println("Door Starting column: "+(tempDoor.doorStart&0xFF));
+	System.out.println("Door Ending column: "+(tempDoor.doorEnd&0xFF));
 
 }
-public static door doorDetails(int doorAddress,byte[] rom) {
+public static door doorDetails(int doorNumber,byte[] rom) {
 /*
 This should be able to extract details with just a ROM address. Get the door details, and other things.
 */
-	door currentDoor =new door();		//Create a door object, so we can determine the direction and other types of the door.
+/*	door currentDoor =new door();		//Create a door object, so we can determine the direction and other types of the door.
 	currentDoor.doorAddress=doorAddress;	//Give the address of the door in ROM.
 	currentDoor.door=getdoorType(doorAddress,rom);	//Based on these, fill in the missing details based on the bits of the type of the door.
 	currentDoor.roomnumber=rom[doorAddress+1];	//Second byte is the room nr , same as before.
@@ -820,7 +827,18 @@ This should be able to extract details with just a ROM address. Get the door det
 	currentDoor.doorStart=rom[doorAddress+3];
 	currentDoor.doorEnd=rom[doorAddress+4];		//The start and ending coords.
 	//The door is now good, and details should be available for printing.
-return currentDoor;
+*/
+	int romOffset=0x190d;	//Base offset for the door parts in the ROM.
+	int doornrRomOffset=0x190D+(doorNumber*5);	//Five bytes for each door, so roomNr*5+the offset.
+	door tempDoor=new door();
+	tempDoor.doorAddress=doornrRomOffset;
+	tempDoor.door=getdoorType(doornrRomOffset,rom);
+	tempDoor.roomnumber=rom[doornrRomOffset+1];
+	tempDoor.columnplyrStarts=rom[doornrRomOffset+2];
+	tempDoor.doorStart=rom[doornrRomOffset+3];
+	tempDoor.doorEnd=rom[doornrRomOffset+4];
+
+return tempDoor;
 }
 public static doortype getdoorType(int address, byte[] rom){	//Returns a doortype based on the address, and gets the individual bytes.
 	doortype dt =new doortype();
